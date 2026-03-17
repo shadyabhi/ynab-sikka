@@ -4,8 +4,8 @@
       <div class="flex items-center gap-2 md:gap-4 min-w-0">
         <h2 class="text-base md:text-xl font-bold neon-text text-sky-400 flex-shrink-0">Chart</h2>
         <select v-model="viewMode" class="bg-slate-800 text-slate-300 border border-slate-700 rounded px-2 py-1 text-xs md:text-sm outline-none focus:border-sky-500 transition-colors min-w-0 truncate">
-          <option value="account">Accounts &rarr; Categories</option>
           <option value="group">Category Groups &rarr; Categories</option>
+          <option value="account">Accounts &rarr; Categories</option>
         </select>
       </div>
       <button
@@ -54,16 +54,20 @@ const props = defineProps({
     type: Object,
     default: () => ({})
   },
+  categoryBudgetMap: {
+    type: Object,
+    default: () => ({})
+  },
   isMaximized: {
     type: Boolean,
     default: false
   }
 });
 
-const emit = defineEmits(['toggle-maximize', 'category-click', 'account-click', 'show-popup']);
+const emit = defineEmits(['toggle-maximize', 'category-click', 'account-click', 'show-popup', 'group-click']);
 
 const chartRef = shallowRef(null);
-const viewMode = ref('account');
+const viewMode = ref('group');
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 const openDetailPopup = (params) => {
@@ -114,17 +118,58 @@ const openDetailPopup = (params) => {
 
 const onClickNode = (params) => {
   if (!chartRef.value) return;
+  if (params.data?._isSpentSlice || params.data?._isRemainingSlice) return;
   const pathInfo = params.treePathInfo;
   if (!pathInfo || pathInfo.length < 2) return;
+
+  // In group view, clicking a group header (depth 2 = root + group) should offer group filtering
+  if (viewMode.value === 'group' && pathInfo.length === 2) {
+    const groupName = pathInfo[1].name;
+    const color = params.color || '#38bdf8';
+
+    const txs = props.transactions.filter(tx => {
+      if (tx.amount >= 0 || tx.deleted || tx.transferaccountid) return false;
+      const g = props.categoryToGroupMap[tx.categoryname || 'Uncategorized'] || 'Uncategorized Group';
+      return g === groupName;
+    }).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+
+    const total = txs.reduce((s, tx) => s + Math.abs(tx.amount) / 1000, 0);
+
+    emit('show-popup', {
+      title: groupName,
+      subtitle: '',
+      color,
+      transactions: txs,
+      total: total.toFixed(2),
+      showFilter: true,
+      filterName: groupName,
+      isGroupFilter: true
+    });
+    return;
+  }
 
   openDetailPopup(params);
 };
 
+// Color palette for category boxes in group view
+const CATEGORY_COLORS = [
+  '#38bdf8', '#a78bfa', '#fb923c', '#34d399', '#f472b6',
+  '#facc15', '#60a5fa', '#c084fc', '#f87171', '#2dd4bf',
+  '#a3e635', '#e879f9'
+];
+
+function dimColor(hex, alpha = 0.18) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+
 const chartOption = computed(() => {
-  // Build hierarchy: Root -> Category -> Payee
-  // Only consider spending: tx.amount < 0
   const spendData = {};
   let totalSpend = 0;
+  const isGroupView = viewMode.value === 'group';
 
   props.transactions.forEach(tx => {
     if (tx.amount < 0 && !tx.deleted && !tx.transferaccountid) {
@@ -149,13 +194,14 @@ const chartOption = computed(() => {
     }
   });
 
-  // Convert to echarts treemap format
-  // data: [{ name, value, children: [{ name, value, children: [] }] }]
   const formatCurrency = (val) => currencyFormatter.format(val);
   const formatPercent = (val) => totalSpend > 0 ? ((val / totalSpend) * 100).toFixed(1) + '%' : '0%';
 
+  let globalColorIdx = 0;
+
   const treemapData = Object.keys(spendData).map(rootName => {
     const categories = spendData[rootName];
+
     const categoryNodes = Object.keys(categories).map(categoryName => {
       const payees = categories[categoryName];
       let categoryTotal = 0;
@@ -171,6 +217,86 @@ const chartOption = computed(() => {
         };
       });
 
+      if (isGroupView) {
+        // Group view: two seamless children per category (spent + remaining)
+        // They look like one box with a fill level — no border between them
+        const budgetInfo = props.categoryBudgetMap[categoryName];
+        const budgeted = budgetInfo?.budgeted || 0;
+        const baseColor = CATEGORY_COLORS[globalColorIdx++ % CATEGORY_COLORS.length];
+        const dim = dimColor(baseColor, 0.18);
+
+        const budgetLabel = budgeted > 0
+          ? `\n${formatCurrency(categoryTotal)} / ${formatCurrency(budgeted)}`
+          : `\n${formatCurrency(categoryTotal)} (${formatPercent(categoryTotal)})`;
+
+        if (budgeted > 0) {
+          const remaining = Math.max(0, budgeted - categoryTotal);
+          const spentChildren = [{
+            name: `Spent`,
+            value: categoryTotal,
+            itemStyle: { color: baseColor, borderWidth: 0 },
+            label: {
+              show: true,
+              color: '#fff',
+              formatter: `Spent\n${formatCurrency(categoryTotal)}`,
+              overflow: 'truncate',
+              ellipsis: ''
+            },
+            _isSpentSlice: true
+          }];
+          if (remaining > 0) {
+            spentChildren.push({
+              name: `Remaining`,
+              value: remaining,
+              itemStyle: { color: dim, borderWidth: 0 },
+              label: {
+                show: true,
+                color: 'rgba(148, 163, 184, 0.8)',
+                formatter: `Remaining\n${formatCurrency(remaining)}`,
+                overflow: 'truncate',
+                ellipsis: ''
+              },
+              _isRemainingSlice: true
+            });
+          }
+          return {
+            name: categoryName,
+            value: Math.max(categoryTotal, budgeted),
+            children: spentChildren,
+            itemStyle: { borderColor: '#1e293b', borderWidth: 1, gapWidth: 0 },
+            label: { formatter: `{b}${budgetLabel}` },
+            upperLabel: {
+              show: true,
+              color: '#fff',
+              height: 24,
+              backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              formatter: `${categoryName} - ${formatCurrency(categoryTotal)} / ${formatCurrency(budgeted)}`,
+              overflow: 'break'
+            },
+            _spent: categoryTotal,
+            _budgeted: budgeted
+          };
+        }
+
+        // No budget set — plain colored leaf
+        return {
+          name: categoryName,
+          value: categoryTotal,
+          itemStyle: { color: baseColor, borderColor: '#1e293b', borderWidth: 1 },
+          label: {
+            show: true,
+            color: '#fff',
+            formatter: `{b}${budgetLabel}`,
+            overflow: 'truncate',
+            ellipsis: ''
+          },
+          _spent: categoryTotal,
+          _budgeted: 0
+        };
+      }
+
+      // Account view: keep payee children as before
+      payeeNodes.sort((a, b) => b.value - a.value);
       return {
         name: categoryName,
         value: categoryTotal,
@@ -180,6 +306,9 @@ const chartOption = computed(() => {
         }
       };
     });
+
+    // Sort categories by value descending (since series sort is disabled)
+    categoryNodes.sort((a, b) => b.value - a.value);
 
     const rootTotal = categoryNodes.reduce((sum, n) => sum + n.value, 0);
 
@@ -193,16 +322,63 @@ const chartOption = computed(() => {
     };
   });
 
+  // Sort groups by value descending (since series sort is disabled)
+  treemapData.sort((a, b) => b.value - a.value);
+
   return {
     tooltip: {
       formatter: function (info) {
         const val = info.value;
         const name = info.name;
-        const treePath = info.treePathInfo.map(item => item.name).filter(n => n !== 'Spending').join(' > ');
+        const pathNames = info.treePathInfo.map(item => item.name).filter(n => n !== 'Spending');
+
+        // For spent/remaining slices, show the parent category's budget info
+        if (isGroupView && (info.data?._isSpentSlice || info.data?._isRemainingSlice)) {
+          const catName = pathNames.length >= 2 ? pathNames[pathNames.length - 2] : name;
+          const groupName = pathNames.length >= 1 ? pathNames[0] : '';
+          const budgetInfo = props.categoryBudgetMap[catName];
+          if (budgetInfo && budgetInfo.budgeted > 0) {
+            const spent = budgetInfo.budgeted - budgetInfo.balance;
+            const remaining = Math.max(0, budgetInfo.balance);
+            const pctUsed = ((spent / budgetInfo.budgeted) * 100).toFixed(1);
+            return `<div class="font-sans">
+                      <div class="font-bold mb-1">${escHtml(groupName ? groupName + ' > ' + catName : catName)}</div>
+                      <div>Spent: ${formatCurrency(spent)} of ${formatCurrency(budgetInfo.budgeted)} (${pctUsed}%)</div>
+                      <div>Remaining: ${formatCurrency(remaining)}</div>
+                    </div>`;
+          }
+        }
+
+        const treePath = pathNames.join(' > ');
         const pct = totalSpend > 0 ? ((val / totalSpend) * 100).toFixed(1) + '%' : '0%';
+
+        // Budget tooltip for group-view categories
+        if (isGroupView && info.data?._budgeted > 0) {
+          const spent = info.data._spent;
+          const budgeted = info.data._budgeted;
+          const remaining = Math.max(0, budgeted - spent);
+          const pctUsed = ((spent / budgeted) * 100).toFixed(1);
+          return `<div class="font-sans">
+                    <div class="font-bold mb-1">${escHtml(treePath || name)}</div>
+                    <div>Spent: ${formatCurrency(spent)} of ${formatCurrency(budgeted)} (${pctUsed}%)</div>
+                    <div>Remaining: ${formatCurrency(remaining)}</div>
+                  </div>`;
+        }
+
+        // Show budget info in tooltip for group container nodes
+        let budgetLine = '';
+        if (isGroupView) {
+          const budgetInfo = props.categoryBudgetMap[name];
+          if (budgetInfo && budgetInfo.budgeted > 0) {
+            const pctUsed = ((val / budgetInfo.budgeted) * 100).toFixed(1);
+            budgetLine = `<div>Budget: ${formatCurrency(budgetInfo.budgeted)} (${pctUsed}% used)</div>`;
+          }
+        }
+
         return `<div class="font-sans">
                   <div class="font-bold mb-1">${escHtml(treePath || name)}</div>
                   <div>Spend: ${formatCurrency(val)} (${pct})</div>
+                  ${budgetLine}
                 </div>`;
       },
       backgroundColor: 'rgba(30, 41, 59, 0.9)',
@@ -219,10 +395,12 @@ const chartOption = computed(() => {
         drillDownIcon: '▶',
         roam: false,
         visibleMin: 300,
+        sort: false,
         label: {
           show: true,
           formatter: '{b}',
-          overflow: 'break'
+          overflow: 'truncate',
+          ellipsis: ''
         },
         upperLabel: {
           show: true,
@@ -243,7 +421,7 @@ const chartOption = computed(() => {
           gapWidth: 1
         },
         breadcrumb: {
-          show: true,
+          show: !isGroupView,
           top: 'bottom',
           left: 'center',
           itemStyle: {
@@ -276,12 +454,17 @@ const chartOption = computed(() => {
             itemStyle: {
               borderColor: '#1e293b',
               borderWidth: 2,
-              gapWidth: 2
+              gapWidth: isGroupView ? 0 : 2
             },
             upperLabel: {
                 show: true,
                 color: '#fff',
                 formatter: function (params) {
+                    if (isGroupView && params.data?._budgeted > 0) {
+                      const spent = params.data._spent;
+                      const budgeted = params.data._budgeted;
+                      return params.name + ' - ' + formatCurrency(spent) + ' / ' + formatCurrency(budgeted);
+                    }
                     const pct = totalSpend > 0 ? ((params.value / totalSpend) * 100).toFixed(1) + '%' : '0%';
                     return params.name + ' - ' + formatCurrency(params.value) + ' (' + pct + ')';
                 },
@@ -290,13 +473,11 @@ const chartOption = computed(() => {
             }
           },
           {
-            colorSaturation: [0.3, 0.5],
-            itemStyle: {
-              borderColor: '#334155',
-              borderWidth: 1,
-              gapWidth: 1
-            },
-            upperLabel: {
+            colorSaturation: isGroupView ? undefined : [0.3, 0.5],
+            itemStyle: isGroupView
+              ? { borderWidth: 0, gapWidth: 0 }
+              : { borderColor: '#334155', borderWidth: 1, gapWidth: 1 },
+            upperLabel: isGroupView ? { show: false } : {
                 show: true,
                 formatter: function (params) {
                     const pct = totalSpend > 0 ? ((params.value / totalSpend) * 100).toFixed(1) + '%' : '0%';

@@ -164,7 +164,7 @@ export async function fetchCategories(token, budgetId, mode = 'auto', onLog = nu
       name: g.name,
       categories: (g.categories || [])
         .filter(c => !c.deleted && !c.hidden)
-        .map(c => ({ id: c.id, name: c.name }))
+        .map(c => ({ id: c.id, name: c.name, budgeted: c.budgeted || 0, balance: c.balance || 0 }))
     }));
 
   setCache('categories', groups);

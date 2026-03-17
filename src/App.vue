@@ -98,6 +98,7 @@
          <SpendingChart
             :transactions="filteredTransactions"
             :categoryToGroupMap="categoryToGroupMap"
+            :categoryBudgetMap="categoryBudgetMap"
             :isMaximized="maximizedPane === 'chart'"
             @toggle-maximize="toggleMaximize('chart')"
             @category-click="onTimelineCategoryClick"
@@ -117,7 +118,7 @@
       :transactions="popupState.transactions"
       :total="popupState.total"
       :show-category-filter="popupState.showFilter"
-      filter-btn-text="Filter by this category"
+      :filter-btn-text="popupState.isGroupFilter ? 'Filter by this group' : 'Filter by this category'"
       @close="closePopup"
       @filter-category="onPopupFilterCategory"
       @filter-account="onPopupFilterAccount"
@@ -351,6 +352,7 @@ const currentPage = ref('analytics');
 const accounts = ref([]);
 const categoryGroups = ref([]);
 const categoryToGroupMap = ref({});
+const categoryBudgetMap = ref({});
 
 const transactionMode = ref('all');
 
@@ -468,7 +470,18 @@ const closePopup = () => {
 };
 
 const onPopupFilterCategory = () => {
-  if (popupState.value.filterName) {
+  if (popupState.value.isGroupFilter && popupState.value.filterName) {
+    // Toggle category group include filter
+    const groupName = popupState.value.filterName;
+    const cgf = filters.value.categoryGroupFilters;
+    if (cgf[groupName] === 'include') {
+      cgf[groupName] = 'neutral';
+    } else {
+      // Reset all to neutral, then include just this group
+      Object.keys(cgf).forEach(k => { cgf[k] = 'neutral'; });
+      cgf[groupName] = 'include';
+    }
+  } else if (popupState.value.filterName) {
     onTimelineCategoryClick(popupState.value.filterName);
   }
   closePopup();
@@ -792,6 +805,14 @@ const loadData = async (mode = 'auto') => {
       });
     });
     categoryToGroupMap.value = mapping;
+
+    const budgetMap = {};
+    groups.forEach(group => {
+      (group.categories || []).forEach(cat => {
+        budgetMap[cat.name] = { budgeted: cat.budgeted / 1000, balance: cat.balance / 1000 };
+      });
+    });
+    categoryBudgetMap.value = budgetMap;
 
     groups.forEach(group => {
       if (!filters.value.categoryGroupFilters[group.name]) {
