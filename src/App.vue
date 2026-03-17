@@ -777,8 +777,11 @@ const loadData = async (mode = 'auto') => {
       transactions: txByAccount.get(acc.id) || []
     }));
 
-    // By default, select nothing (sidebar will auto-select all)
-    filters.value.selectedAccounts = [];
+    // On initial/force load, reset selection so sidebar auto-selects all.
+    // On pull, keep existing selection to avoid blanking out transactions.
+    if (mode !== 'pull') {
+      filters.value.selectedAccounts = [];
+    }
 
     // Category groups
     categoryGroups.value = groups;
