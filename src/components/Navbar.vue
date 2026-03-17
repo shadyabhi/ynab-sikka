@@ -1,10 +1,21 @@
 <template>
   <div>
-    <nav class="bg-slate-900 border-b border-slate-700/50 px-6 py-3 flex items-center justify-between relative z-20">
-      <div class="flex items-center gap-8">
-        <h1 class="text-xl font-bold neon-text text-sky-400">YNAB Tracker</h1>
+    <nav class="bg-slate-900 border-b border-slate-700/50 px-3 md:px-6 py-2 md:py-3 flex items-center justify-between relative z-20">
+      <div class="flex items-center gap-3 md:gap-8">
+        <!-- Mobile sidebar toggle -->
+        <button
+          @click="emit('toggle-sidebar')"
+          class="p-1.5 text-slate-400 hover:text-sky-300 hover:bg-slate-800/50 rounded-lg transition-colors md:hidden"
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path v-if="!sidebarOpen" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            <path v-else stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
 
-        <div class="flex items-center gap-4">
+        <h1 class="text-lg md:text-xl font-bold neon-text text-sky-400">YNAB Tracker</h1>
+
+        <div class="hidden md:flex items-center gap-4">
           <a
             href="#"
             @click.prevent="navigate('analytics')"
@@ -16,8 +27,8 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <span v-if="lastSyncTime" class="text-xs text-slate-500">
+      <div class="flex items-center gap-1.5 md:gap-3">
+        <span v-if="lastSyncTime" class="text-[10px] md:text-xs text-slate-500 hidden sm:inline">
           Synced {{ syncAgo }}
         </span>
 
@@ -121,10 +132,11 @@ const props = defineProps({
   lastSyncTime: { type: Number, default: null },
   syncing: { type: Boolean, default: false },
   syncLog: { type: Array, default: () => [] },
-  syncError: { type: String, default: null }
+  syncError: { type: String, default: null },
+  sidebarOpen: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['navigate', 'open-settings', 'pull', 'force-sync']);
+const emit = defineEmits(['navigate', 'open-settings', 'pull', 'force-sync', 'toggle-sidebar']);
 
 const showLog = ref(false);
 const syncMode = ref(null); // 'pull' or 'force'

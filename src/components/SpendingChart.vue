@@ -1,9 +1,9 @@
 <template>
   <div class="glass-panel h-full flex flex-col overflow-hidden">
-    <div class="flex justify-between items-center w-full mb-6 gap-4">
-      <div class="flex items-center gap-4">
-        <h2 class="text-xl font-bold neon-text text-sky-400">Chart</h2>
-        <select v-model="viewMode" class="bg-slate-800 text-slate-300 border border-slate-700 rounded px-2 py-1 text-sm outline-none focus:border-sky-500 transition-colors">
+    <div class="flex justify-between items-center w-full mb-4 md:mb-6 gap-2 md:gap-4">
+      <div class="flex items-center gap-2 md:gap-4 min-w-0">
+        <h2 class="text-base md:text-xl font-bold neon-text text-sky-400 flex-shrink-0">Chart</h2>
+        <select v-model="viewMode" class="bg-slate-800 text-slate-300 border border-slate-700 rounded px-2 py-1 text-xs md:text-sm outline-none focus:border-sky-500 transition-colors min-w-0 truncate">
           <option value="account">Accounts &rarr; Categories</option>
           <option value="group">Category Groups &rarr; Categories</option>
         </select>
@@ -24,7 +24,7 @@
     <div v-if="transactions.length === 0" class="flex-1 flex items-center justify-center text-slate-500 italic">
       No spending data available.
     </div>
-    <div v-else class="w-full flex-1 relative min-h-[400px]">
+    <div v-else class="w-full flex-1 relative min-h-[250px] md:min-h-[400px]">
       <v-chart ref="chartRef" class="chart" :option="chartOption" autoresize @click="onClickNode" />
     </div>
   </div>

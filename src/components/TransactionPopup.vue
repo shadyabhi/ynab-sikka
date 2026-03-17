@@ -106,9 +106,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown));
   border: 1px solid rgba(56, 189, 248, 0.35);
   border-radius: 10px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.08);
-  width: 90vw;
+  width: 95vw;
   max-width: 640px;
-  max-height: 80vh;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -119,19 +119,22 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown));
 
 .detail-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 14px 18px 10px;
+  padding: 12px 14px 10px;
   border-bottom: 1px solid rgba(56, 189, 248, 0.15);
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .detail-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
+  gap: 6px;
+  font-size: 13px;
   font-weight: 700;
   color: #e2e8f0;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 .detail-color-dot {
   width: 10px;
@@ -192,15 +195,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown));
 }
 
 .detail-table-wrap {
-  overflow-y: auto;
+  overflow: auto;
   flex: 1;
   min-height: 0;
-  padding: 0 18px 14px;
+  padding: 0 14px 14px;
 }
 .detail-table {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 11px;
 }
 .detail-table thead th {
   position: sticky;

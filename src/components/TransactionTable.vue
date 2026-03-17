@@ -92,7 +92,7 @@
     </div>
 
     <div class="flex-1 overflow-auto rounded-xl border border-slate-700/50 custom-scrollbar relative">
-      <table class="w-full text-left text-sm text-slate-300 table-fixed">
+      <table class="w-full text-left text-xs md:text-sm text-slate-300 table-fixed" style="min-width: 700px;">
         <thead class="text-xs text-sky-300 uppercase bg-slate-800/80 sticky top-0 backdrop-blur-md z-10 shadow-sm">
           <tr>
             <th v-if="mode === 'unapproved'" class="px-2 py-3 w-10 text-center">

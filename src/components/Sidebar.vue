@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 glass-panel flex flex-col h-full overflow-y-auto">
+  <div class="p-4 md:p-6 glass-panel flex flex-col h-full overflow-y-auto bg-slate-800 md:bg-slate-800/60">
     <!-- Global Quick Select -->
     <div class="mb-4 flex justify-between items-center bg-slate-900/60 p-2.5 rounded-lg border border-slate-700/50">
       <span class="text-xs uppercase font-bold text-slate-400">Global Selection</span>

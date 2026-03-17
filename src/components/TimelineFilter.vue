@@ -1,5 +1,5 @@
 <template>
-  <div class="timeline-wrapper p-4 glass-panel flex flex-col relative z-10" :class="[{'opacity-50 pointer-events-none': !hasData}, isMaximized ? 'flex-1 h-full min-h-0' : 'mb-6 flex-none h-auto']">
+  <div class="timeline-wrapper p-3 md:p-4 glass-panel flex flex-col relative z-10" :class="[{'opacity-50 pointer-events-none': !hasData}, isMaximized ? 'flex-1 h-full min-h-0' : 'mb-4 md:mb-6 flex-none h-auto']">
     <!-- Controls Area: Allowed to wrap tightly -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-2 w-full">
       <div class="flex items-center gap-1.5 flex-wrap">

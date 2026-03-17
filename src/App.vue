@@ -1,13 +1,21 @@
 <template>
   <div class="h-screen w-screen bg-slate-900 text-slate-200 overflow-hidden flex flex-col">
-    <Navbar :current-page="currentPage" :last-sync-time="lastSyncTime" :syncing="syncing" :sync-log="syncLog" :sync-error="syncError" @navigate="page => currentPage = page" @open-settings="openSettings" @pull="pullData" @force-sync="forceSyncData" />
+    <Navbar :current-page="currentPage" :last-sync-time="lastSyncTime" :syncing="syncing" :sync-log="syncLog" :sync-error="syncError" @navigate="page => currentPage = page" @open-settings="openSettings" @pull="pullData" @force-sync="forceSyncData" @toggle-sidebar="sidebarOpen = !sidebarOpen" :sidebar-open="sidebarOpen" />
 
     <div v-show="currentPage === 'analytics'" class="flex-1 flex flex-col md:flex-row overflow-hidden">
+
+      <!-- Mobile Sidebar Overlay -->
+      <div
+        v-if="sidebarOpen"
+        class="fixed inset-0 z-30 bg-slate-900/60 backdrop-blur-sm md:hidden"
+        @click="sidebarOpen = false"
+      ></div>
 
       <!-- Sidebar / Filters -->
       <div
         v-show="!maximizedPane"
-        class="w-full md:w-80 h-1/3 md:h-full flex-shrink-0 p-4 pb-2 md:pb-4 md:pr-2"
+        class="fixed inset-y-0 left-0 z-40 w-80 max-w-[85vw] transform transition-transform duration-300 md:relative md:inset-auto md:z-auto md:transform-none md:h-full flex-shrink-0 p-4 pb-2 md:pb-4 md:pr-2"
+        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
       >
         <Sidebar
           :accounts="accounts"
@@ -17,7 +25,7 @@
       </div>
 
       <!-- Main Content -->
-      <div class="flex-1 flex flex-col h-2/3 md:h-full p-4 pt-2 md:pt-4 md:pl-2 gap-4 overflow-y-auto">
+      <div class="flex-1 flex flex-col h-full p-3 md:p-4 pt-2 md:pt-4 md:pl-2 gap-3 md:gap-4 overflow-y-auto">
 
 
       <!-- Timeline Filter -->
@@ -38,7 +46,7 @@
       <div
         v-show="maximizedPane === null || maximizedPane === 'table'"
         class="transition-all duration-300"
-        :class="maximizedPane === 'table' ? 'flex-1 h-full' : 'flex-none h-[500px]'"
+        :class="maximizedPane === 'table' ? 'flex-1 h-full' : 'flex-none h-[300px] md:h-[500px]'"
       >
          <TransactionTable
             v-show="transactionMode === 'all'"
@@ -137,14 +145,14 @@
         </div>
 
         <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
-          <table class="w-full text-left text-sm text-slate-300">
+        <div class="flex-1 overflow-auto p-4 custom-scrollbar">
+          <table class="w-full text-left text-xs md:text-sm text-slate-300" style="min-width: 500px;">
             <thead class="text-xs text-purple-300 uppercase bg-slate-800/80 sticky top-0 backdrop-blur-md">
               <tr>
-                <th class="px-4 py-2">Date</th>
-                <th class="px-4 py-2">Account</th>
-                <th class="px-4 py-2">Payee (Transfer)</th>
-                <th class="px-4 py-2 text-right">Amount</th>
+                <th class="px-2 md:px-4 py-2">Date</th>
+                <th class="px-2 md:px-4 py-2">Account</th>
+                <th class="px-2 md:px-4 py-2">Payee (Transfer)</th>
+                <th class="px-2 md:px-4 py-2 text-right">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -154,10 +162,10 @@
                 class="border-b border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
                 :class="getMagicRowClass(tx)"
               >
-                <td class="px-4 py-2 whitespace-nowrap">{{ new Date(tx.date).toLocaleDateString() }}</td>
-                <td class="px-4 py-2"><span class="text-xs bg-slate-700 px-2 py-0.5 rounded">{{ tx.accountname }}</span></td>
-                <td class="px-4 py-2 truncate max-w-xs">{{ tx.payeename }}</td>
-                <td class="px-4 py-2 text-right font-mono" :class="tx.amount > 0 ? 'text-emerald-400' : 'text-slate-300'">
+                <td class="px-2 md:px-4 py-2 whitespace-nowrap">{{ new Date(tx.date).toLocaleDateString() }}</td>
+                <td class="px-2 md:px-4 py-2"><span class="text-xs bg-slate-700 px-2 py-0.5 rounded">{{ tx.accountname }}</span></td>
+                <td class="px-2 md:px-4 py-2 truncate max-w-xs">{{ tx.payeename }}</td>
+                <td class="px-2 md:px-4 py-2 text-right font-mono" :class="tx.amount > 0 ? 'text-emerald-400' : 'text-slate-300'">
                   ${{ formatAmount(tx.amount) }}
                 </td>
               </tr>
@@ -169,19 +177,19 @@
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-slate-700/50 bg-slate-800/90 flex justify-between items-center gap-3">
-          <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+        <div class="p-3 md:p-4 border-t border-slate-700/50 bg-slate-800/90 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <label class="flex items-center gap-2 text-xs md:text-sm text-slate-300 cursor-pointer">
             <input type="checkbox" v-model="magicState.dryRun" class="rounded bg-slate-700 border-slate-600 text-purple-500 focus:ring-purple-500" />
             <span>Test Mode (Don't save to file)</span>
           </label>
-          <div class="flex gap-3">
-            <button @click="closeMagicModal" class="px-6 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors border border-slate-600">
+          <div class="flex gap-2 md:gap-3 w-full sm:w-auto">
+            <button @click="closeMagicModal" class="px-4 md:px-6 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium transition-colors border border-slate-600 flex-1 sm:flex-none">
               Cancel
             </button>
             <button
               @click="confirmMagicApprove"
               :disabled="magicState.transfers.length === 0 || magicState.saving"
-              class="px-6 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-medium shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all flex items-center gap-2"
+              class="px-4 md:px-6 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-medium shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all flex items-center justify-center gap-2 flex-1 sm:flex-none"
             >
               <span v-if="magicState.saving" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
               {{ magicState.saving ? 'Approving...' : 'Approve All' }}
@@ -194,7 +202,7 @@
     <div v-if="approveConfirm.visible" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" @click="closeApproveConfirm"></div>
 
-      <div class="relative bg-slate-800 border border-emerald-500/50 rounded-2xl shadow-2xl w-[80%] max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="relative bg-slate-800 border border-emerald-500/50 rounded-2xl shadow-2xl w-[95%] md:w-[80%] max-h-[90vh] flex flex-col overflow-hidden">
         <!-- Header -->
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/80 sticky top-0 z-10">
           <div>
@@ -212,16 +220,16 @@
         </div>
 
         <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
-          <table class="w-full text-left text-sm text-slate-300">
+        <div class="flex-1 overflow-auto p-4 custom-scrollbar">
+          <table class="w-full text-left text-xs md:text-sm text-slate-300" style="min-width: 600px;">
             <thead class="text-xs text-emerald-300 uppercase bg-slate-800/80 sticky top-0 backdrop-blur-md">
               <tr>
-                <th class="px-4 py-2">Date</th>
-                <th class="px-4 py-2">Payee</th>
-                <th class="px-4 py-2">Account</th>
-                <th class="px-4 py-2">Category</th>
-                <th class="px-4 py-2">Memo</th>
-                <th class="px-4 py-2 text-right">Amount</th>
+                <th class="px-2 md:px-4 py-2">Date</th>
+                <th class="px-2 md:px-4 py-2">Payee</th>
+                <th class="px-2 md:px-4 py-2">Account</th>
+                <th class="px-2 md:px-4 py-2">Category</th>
+                <th class="px-2 md:px-4 py-2">Memo</th>
+                <th class="px-2 md:px-4 py-2 text-right">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -230,9 +238,9 @@
                 :key="tx.id"
                 class="border-b border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
               >
-                <td class="px-4 py-2 whitespace-nowrap">{{ new Date(tx.date).toLocaleDateString() }}</td>
-                <td class="px-4 py-2 truncate max-w-xs">{{ tx.payeename }}</td>
-                <td class="px-4 py-2"><span class="text-xs bg-slate-700 px-2 py-0.5 rounded">{{ tx.accountname }}</span></td>
+                <td class="px-2 md:px-4 py-2 whitespace-nowrap">{{ new Date(tx.date).toLocaleDateString() }}</td>
+                <td class="px-2 md:px-4 py-2 truncate max-w-xs">{{ tx.payeename }}</td>
+                <td class="px-2 md:px-4 py-2"><span class="text-xs bg-slate-700 px-2 py-0.5 rounded">{{ tx.accountname }}</span></td>
                 <td class="px-3 py-1.5">
                   <span
                     v-if="!tx.editingCategory"
@@ -270,14 +278,14 @@
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-slate-700/50 bg-slate-800/90 flex justify-end items-center gap-3">
-          <button @click="closeApproveConfirm" class="px-6 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors border border-slate-600">
+        <div class="p-3 md:p-4 border-t border-slate-700/50 bg-slate-800/90 flex justify-end items-center gap-2 md:gap-3">
+          <button @click="closeApproveConfirm" class="px-4 md:px-6 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium transition-colors border border-slate-600">
             Cancel
           </button>
           <button
             @click="confirmApproveSelected"
             :disabled="approveConfirm.saving"
-            class="px-6 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium shadow-[0_0_15px_rgba(52,211,153,0.4)] transition-all flex items-center gap-2"
+            class="px-4 md:px-6 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium shadow-[0_0_15px_rgba(52,211,153,0.4)] transition-all flex items-center gap-2"
           >
             <span v-if="approveConfirm.saving" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             {{ approveConfirm.saving ? 'Approving...' : 'Confirm Approve' }}
@@ -289,7 +297,7 @@
     <!-- Settings Modal -->
     <div v-if="settingsState.visible" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" @click="closeSettings"></div>
-      <div class="relative bg-slate-800 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden resize" style="min-width: 320px; min-height: 280px;">
+      <div class="relative bg-slate-800 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden resize" style="min-width: 280px; min-height: 280px;">
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center flex-shrink-0">
           <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2">
             <svg class="w-5 h-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -428,6 +436,7 @@ const resetGlobalFilters = () => {
   filters.value.quickCategoryFilters = {};
 };
 
+const sidebarOpen = ref(false);
 const maximizedPane = ref(null); // 'table', 'chart', or null
 
 const toggleMaximize = (pane) => {
