@@ -69,6 +69,7 @@
             @update:mode="transactionMode = $event"
             @toggle-maximize="toggleMaximize('table')"
             @magic-approve="openMagicModal"
+            @approve-selected="openApproveConfirm"
          />
       </div>
 
@@ -189,6 +190,74 @@
         </div>
       </div>
     </div>
+    <!-- Approve Confirmation Modal -->
+    <div v-if="approveConfirm.visible" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" @click="closeApproveConfirm"></div>
+
+      <div class="relative bg-slate-800 border border-emerald-500/50 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/80 sticky top-0 z-10">
+          <div>
+            <h2 class="text-xl font-bold flex items-center gap-2 text-emerald-400">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Approve Transactions
+            </h2>
+            <div class="text-xs text-slate-400 mt-1">{{ approveConfirm.transactions.length }} transaction{{ approveConfirm.transactions.length === 1 ? '' : 's' }} will be approved in YNAB.</div>
+          </div>
+          <button @click="closeApproveConfirm" class="text-slate-400 hover:text-white bg-slate-700/50 hover:bg-rose-500/80 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+            &times;
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="text-xs text-emerald-300 uppercase bg-slate-800/80 sticky top-0 backdrop-blur-md">
+              <tr>
+                <th class="px-4 py-2">Date</th>
+                <th class="px-4 py-2">Payee</th>
+                <th class="px-4 py-2">Account</th>
+                <th class="px-4 py-2">Category</th>
+                <th class="px-4 py-2 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="tx in approveConfirm.transactions"
+                :key="tx.id"
+                class="border-b border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
+              >
+                <td class="px-4 py-2 whitespace-nowrap">{{ new Date(tx.date).toLocaleDateString() }}</td>
+                <td class="px-4 py-2 truncate max-w-xs">{{ tx.payeename }}</td>
+                <td class="px-4 py-2"><span class="text-xs bg-slate-700 px-2 py-0.5 rounded">{{ tx.accountname }}</span></td>
+                <td class="px-4 py-2 text-xs">{{ tx.categoryname }}</td>
+                <td class="px-4 py-2 text-right font-mono" :class="tx.amount > 0 ? 'text-emerald-400' : 'text-slate-300'">
+                  ${{ formatAmount(tx.amount) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-4 border-t border-slate-700/50 bg-slate-800/90 flex justify-end items-center gap-3">
+          <button @click="closeApproveConfirm" class="px-6 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors border border-slate-600">
+            Cancel
+          </button>
+          <button
+            @click="confirmApproveSelected"
+            :disabled="approveConfirm.saving"
+            class="px-6 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium shadow-[0_0_15px_rgba(52,211,153,0.4)] transition-all flex items-center gap-2"
+          >
+            <span v-if="approveConfirm.saving" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            {{ approveConfirm.saving ? 'Approving...' : 'Confirm Approve' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Settings Modal -->
     <div v-if="settingsState.visible" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" @click="closeSettings"></div>
@@ -514,6 +583,48 @@ const confirmMagicApprove = async () => {
     console.error('Error approving:', e);
   } finally {
     magicState.value.saving = false;
+  }
+};
+
+// -- Approve Selected Confirmation --
+const approveConfirm = ref({
+  visible: false,
+  saving: false,
+  transactions: [],
+  ids: []
+});
+
+const openApproveConfirm = (selectedIds) => {
+  const allUnapproved = unapprovedTransactions.value || [];
+  const selectedSet = new Set(selectedIds);
+  const txs = allUnapproved.filter(tx => selectedSet.has(tx.id));
+  approveConfirm.value.transactions = txs;
+  approveConfirm.value.ids = selectedIds;
+  approveConfirm.value.visible = true;
+};
+
+const closeApproveConfirm = () => {
+  approveConfirm.value.visible = false;
+};
+
+const confirmApproveSelected = async () => {
+  approveConfirm.value.saving = true;
+  try {
+    const token = localStorage.getItem('ynabToken');
+    const budgetId = localStorage.getItem('ynabBudgetId');
+    if (!token || !budgetId) {
+      syncError.value = 'Token and Budget ID required. Configure in Settings.';
+      closeApproveConfirm();
+      return;
+    }
+    await approveTransactions(token, budgetId, approveConfirm.value.ids);
+    closeApproveConfirm();
+    await loadData('force');
+  } catch(e) {
+    console.error('Error approving:', e);
+    syncError.value = e.message;
+  } finally {
+    approveConfirm.value.saving = false;
   }
 };
 

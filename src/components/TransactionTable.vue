@@ -32,6 +32,18 @@
           </svg>
           <span class="text-xs font-semibold uppercase tracking-wider hidden md:block">AI Approve</span>
         </button>
+
+        <button
+          v-if="mode === 'unapproved' && selectedIds.size > 0"
+          @click="$emit('approve-selected', [...selectedIds])"
+          class="p-1 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-all shadow-[0_0_10px_rgba(52,211,153,0.3)] flex items-center gap-1.5"
+          title="Approve Selected"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span class="text-xs font-semibold">Approve {{ selectedIds.size }}</span>
+        </button>
       </div>
 
       <div class="flex flex-wrap md:flex-nowrap items-center gap-4 w-full md:w-auto">
@@ -83,6 +95,15 @@
       <table class="w-full text-left text-sm text-slate-300 table-fixed">
         <thead class="text-xs text-sky-300 uppercase bg-slate-800/80 sticky top-0 backdrop-blur-md z-10 shadow-sm">
           <tr>
+            <th v-if="mode === 'unapproved'" class="px-2 py-3 w-10 text-center">
+              <input
+                type="checkbox"
+                :checked="selectedIds.size > 0 && selectedIds.size === filteredTransactions.length"
+                :indeterminate="selectedIds.size > 0 && selectedIds.size < filteredTransactions.length"
+                @change="toggleSelectAll"
+                class="rounded bg-slate-700 border-slate-600 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
+              />
+            </th>
             <th
               v-for="col in columns"
               :key="col.field"
@@ -128,7 +149,7 @@
         </thead>
         <tbody>
           <tr v-if="filteredTransactions.length === 0">
-            <td colspan="6" class="px-4 py-8 text-center text-slate-500 italic bg-slate-900/30">
+            <td :colspan="mode === 'unapproved' ? 7 : 6" class="px-4 py-8 text-center text-slate-500 italic bg-slate-900/30">
               No transactions found matching criteria.
             </td>
           </tr>
@@ -138,6 +159,14 @@
             class="border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors group"
             :class="{ 'bg-purple-900/10 shadow-[inset_3px_0_0_rgba(168,85,247,0.5)]': tx.transferaccountid }"
           >
+            <td v-if="mode === 'unapproved'" class="px-2 py-3 text-center w-10">
+              <input
+                type="checkbox"
+                :checked="selectedIds.has(tx.id)"
+                @change="toggleSelect(tx.id)"
+                class="rounded bg-slate-700 border-slate-600 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
+              />
+            </td>
             <td class="px-4 py-3 whitespace-nowrap text-slate-400 group-hover:text-slate-300 cursor-pointer hover:bg-slate-700/30 transition-colors truncate" @click.stop="addTag('date', formatDate(tx.date))">{{ formatDate(tx.date) }}</td>
             <td class="px-4 py-3 font-medium text-slate-200 cursor-pointer hover:bg-slate-700/30 transition-colors truncate" @click.stop="addTag('payeename', tx.payeename)">{{ tx.payeename }}</td>
             <td class="px-4 py-3 text-slate-400 text-xs flex items-center gap-2 cursor-pointer hover:bg-slate-700/30 transition-colors truncate" @click.stop="addTag('accountname', formatAccountName(tx.accountname))">
@@ -236,6 +265,23 @@ onUnmounted(() => {
   window.removeEventListener('mouseup', onMouseUp);
 });
 
+const selectedIds = ref(new Set());
+
+const toggleSelect = (id) => {
+  const next = new Set(selectedIds.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  selectedIds.value = next;
+};
+
+const toggleSelectAll = () => {
+  if (selectedIds.value.size === filteredTransactions.value.length) {
+    selectedIds.value = new Set();
+  } else {
+    selectedIds.value = new Set(filteredTransactions.value.map(tx => tx.id));
+  }
+};
+
 const props = defineProps({
   transactions: {
     type: Array,
@@ -285,6 +331,7 @@ const emit = defineEmits([
   'update:quickCategoryFilters',
   'toggle-maximize',
   'magic-approve',
+  'approve-selected',
   'update:mode'
 ]);
 
