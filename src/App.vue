@@ -194,7 +194,7 @@
     <div v-if="approveConfirm.visible" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" @click="closeApproveConfirm"></div>
 
-      <div class="relative bg-slate-800 border border-emerald-500/50 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="relative bg-slate-800 border border-emerald-500/50 rounded-2xl shadow-2xl w-[80%] max-h-[90vh] flex flex-col overflow-hidden">
         <!-- Header -->
         <div class="px-6 py-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/80 sticky top-0 z-10">
           <div>
@@ -220,19 +220,47 @@
                 <th class="px-4 py-2">Payee</th>
                 <th class="px-4 py-2">Account</th>
                 <th class="px-4 py-2">Category</th>
+                <th class="px-4 py-2">Memo</th>
                 <th class="px-4 py-2 text-right">Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="tx in approveConfirm.transactions"
+                v-for="(tx, idx) in approveConfirm.transactions"
                 :key="tx.id"
                 class="border-b border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
               >
                 <td class="px-4 py-2 whitespace-nowrap">{{ new Date(tx.date).toLocaleDateString() }}</td>
                 <td class="px-4 py-2 truncate max-w-xs">{{ tx.payeename }}</td>
                 <td class="px-4 py-2"><span class="text-xs bg-slate-700 px-2 py-0.5 rounded">{{ tx.accountname }}</span></td>
-                <td class="px-4 py-2 text-xs">{{ tx.categoryname }}</td>
+                <td class="px-3 py-1.5">
+                  <span
+                    v-if="!tx.editingCategory"
+                    @click="approveConfirm.transactions[idx].editingCategory = true"
+                    class="text-xs cursor-pointer hover:text-emerald-300 transition-colors"
+                    title="Click to change category"
+                  >{{ tx.categoryname || 'Uncategorized' }}</span>
+                  <select
+                    v-else
+                    v-model="approveConfirm.transactions[idx].editCategoryId"
+                    @change="onApproveCategoryChange(idx)"
+                    @blur="approveConfirm.transactions[idx].editingCategory = false"
+                    class="w-full bg-slate-900/60 border border-slate-700/80 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  >
+                    <option :value="null" class="text-slate-500">Uncategorized</option>
+                    <optgroup v-for="group in categoryGroups" :key="group.name" :label="group.name">
+                      <option v-for="cat in group.categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                    </optgroup>
+                  </select>
+                </td>
+                <td class="px-3 py-1.5">
+                  <input
+                    type="text"
+                    v-model="approveConfirm.transactions[idx].editMemo"
+                    placeholder="Add memo..."
+                    class="w-full bg-slate-900/60 border border-slate-700/80 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder-slate-500"
+                  />
+                </td>
                 <td class="px-4 py-2 text-right font-mono" :class="tx.amount > 0 ? 'text-emerald-400' : 'text-slate-300'">
                   ${{ formatAmount(tx.amount) }}
                 </td>
@@ -575,7 +603,7 @@ const confirmMagicApprove = async () => {
         closeMagicModal();
         return;
       }
-      await approveTransactions(token, budgetId, ids);
+      await approveTransactions(token, budgetId, ids.map(id => ({ id })));
       await loadData('force'); // force refresh after approve
     }
     closeMagicModal();
@@ -590,17 +618,40 @@ const confirmMagicApprove = async () => {
 const approveConfirm = ref({
   visible: false,
   saving: false,
-  transactions: [],
-  ids: []
+  transactions: []
+});
+
+// Flat list of all categories for the dropdown
+const allCategories = computed(() => {
+  const cats = [];
+  for (const group of categoryGroups.value) {
+    for (const cat of group.categories || []) {
+      cats.push({ id: cat.id, name: cat.name, group: group.name });
+    }
+  }
+  return cats;
 });
 
 const openApproveConfirm = (selectedIds) => {
   const allUnapproved = unapprovedTransactions.value || [];
   const selectedSet = new Set(selectedIds);
-  const txs = allUnapproved.filter(tx => selectedSet.has(tx.id));
+  const txs = allUnapproved
+    .filter(tx => selectedSet.has(tx.id))
+    .map(tx => ({
+      ...tx,
+      editCategoryId: tx.categoryid,
+      editingCategory: false,
+      editMemo: tx.memo
+    }));
   approveConfirm.value.transactions = txs;
-  approveConfirm.value.ids = selectedIds;
   approveConfirm.value.visible = true;
+};
+
+const onApproveCategoryChange = (idx) => {
+  const tx = approveConfirm.value.transactions[idx];
+  const cat = allCategories.value.find(c => c.id === tx.editCategoryId);
+  tx.categoryname = cat ? cat.name : 'Uncategorized';
+  tx.editingCategory = false;
 };
 
 const closeApproveConfirm = () => {
@@ -617,7 +668,13 @@ const confirmApproveSelected = async () => {
       closeApproveConfirm();
       return;
     }
-    await approveTransactions(token, budgetId, approveConfirm.value.ids);
+    const updates = approveConfirm.value.transactions.map(tx => {
+      const u = { id: tx.id };
+      if (tx.editCategoryId !== tx.categoryid) u.category_id = tx.editCategoryId;
+      if (tx.editMemo !== tx.memo) u.memo = tx.editMemo;
+      return u;
+    });
+    await approveTransactions(token, budgetId, updates);
     closeApproveConfirm();
     await loadData('force');
   } catch(e) {

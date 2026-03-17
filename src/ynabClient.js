@@ -46,6 +46,7 @@ function mapTransaction(t) {
     memo: t.memo || '',
     payeename: t.payee_name || '',
     categoryname: t.category_name || '',
+    categoryid: t.category_id || null,
     accountname: '',
     accountid: '',
     transferaccountid: t.transfer_account_id || null,
@@ -163,7 +164,7 @@ export async function fetchCategories(token, budgetId, mode = 'auto', onLog = nu
       name: g.name,
       categories: (g.categories || [])
         .filter(c => !c.deleted && !c.hidden)
-        .map(c => ({ name: c.name }))
+        .map(c => ({ id: c.id, name: c.name }))
     }));
 
   setCache('categories', groups);
@@ -172,7 +173,8 @@ export async function fetchCategories(token, budgetId, mode = 'auto', onLog = nu
   return groups;
 }
 
-export async function approveTransactions(token, budgetId, transactionIds) {
+// updates: array of { id, category_id?, memo? } — fields to change alongside approval
+export async function approveTransactions(token, budgetId, updates) {
   const res = await fetch(`${YNAB_API}/budgets/${budgetId}/transactions`, {
     method: 'PATCH',
     headers: {
@@ -180,7 +182,12 @@ export async function approveTransactions(token, budgetId, transactionIds) {
       Authorization: `Bearer ${token}`
     },
     body: JSON.stringify({
-      transactions: transactionIds.map(id => ({ id, approved: true }))
+      transactions: updates.map(u => {
+        const tx = { id: u.id, approved: true };
+        if (u.category_id !== undefined) tx.category_id = u.category_id;
+        if (u.memo !== undefined) tx.memo = u.memo;
+        return tx;
+      })
     })
   });
 
