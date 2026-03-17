@@ -97,6 +97,12 @@
 
           <div v-if="syncing && syncLog.length === 0" class="text-xs text-slate-500 italic">Connecting to YNAB API...</div>
 
+          <div v-if="syncLog.length > 0" class="flex items-center gap-4 text-xs mt-1.5 pt-1.5 border-t border-slate-800">
+            <span class="text-slate-500">
+              <span class="text-slate-400 font-semibold">{{ apiCallCount }}</span> API call{{ apiCallCount !== 1 ? 's' : '' }}
+            </span>
+          </div>
+
           <div v-if="syncError" class="flex items-center gap-2 text-xs mt-1">
             <span class="px-1.5 py-0.5 rounded text-[10px] bg-red-500/10 text-red-400 border border-red-500/20">ERROR</span>
             <span class="text-red-400">{{ syncError }}</span>
@@ -139,13 +145,13 @@ const onForceSync = () => {
   emit('force-sync');
 };
 
-// Auto-hide log 4 seconds after sync completes
+// Auto-hide log 5 seconds after sync completes
 watch(() => props.syncing, (isSyncing, wasSyncing) => {
   if (!isSyncing && wasSyncing) {
     setTimeout(() => {
       showLog.value = false;
       syncMode.value = null;
-    }, 4000);
+    }, 5000);
   }
 });
 
@@ -156,6 +162,8 @@ const syncAgo = computed(() => {
   if (mins === 1) return '1 min ago';
   return `${mins} min ago`;
 });
+
+const apiCallCount = computed(() => props.syncLog.filter(e => !e.cached).length);
 
 function shortEndpoint(ep) {
   if (!ep) return '';
