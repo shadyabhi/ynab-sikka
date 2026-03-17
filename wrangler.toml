@@ -1,7 +1,7 @@
 name = "ynabtracker"
 compatibility_date = "2024-12-01"
 routes = [
-  { pattern = "ynab.abhijeetrastogi.com", custom_domain = true }
+  { pattern = "sikka.abhijeetrastogi.com", custom_domain = true }
 ]
 
 [assets]
