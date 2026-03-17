@@ -519,6 +519,9 @@ const openSettings = () => {
   const token = localStorage.getItem('ynabToken') || '';
   const budgetId = localStorage.getItem('ynabBudgetId') || '';
   const syncSince = localStorage.getItem('ynabSyncSince') || defaultSyncSince();
+  if (token || budgetId) {
+    if (!confirm('Settings contain sensitive data (API token). Are you sure you want to show settings?')) return;
+  }
   settingsState.value.tomlText = buildToml(token, budgetId, syncSince);
   settingsState.value.error = '';
   settingsState.value.visible = true;
