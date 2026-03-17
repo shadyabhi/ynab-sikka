@@ -2,6 +2,20 @@
 
 YNAB Tracker that does a better job at visualizing expenses than the official website.
 
+# Setup
+
+Paste this config when the UI starts up for the first time. After hitting submit, the UI should automatically finish loading the transactions.
+
+```bash
+[ynab]
+token = ""
+budget_id = ""
+
+[app]
+# YYYY-MM-DD, defaults to start of current quarter
+sync_since = "2026-01-01"
+```
+
 # Dev
 
 ```bash

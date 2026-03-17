@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --background-dark: #0f172a;
+  /* slate-900 */
+  --surface-dark: #1e293b;
+  /* slate-800 */
+  --primary-glow: rgba(56, 189, 248, 0.4);
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: var(--background-dark);
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--background-dark);
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  margin: 0 auto;
+}
+
+/* Glassmorphism Classes */
+.glass {
+  @apply bg-slate-800/60 backdrop-blur-md border border-slate-700/50 shadow-xl;
+}
+
+.glass-panel {
+  @apply bg-slate-800/60 backdrop-blur-md border border-slate-700/50 shadow-xl rounded-2xl p-6 transition-all duration-300;
+}
+
+.glass-panel:hover {
+  @apply shadow-[0_0_20px_var(--primary-glow)] border-sky-500/30;
+}
+
+.neon-text {
+  text-shadow: 0 0 10px var(--primary-glow);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.3);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.6);
+}
