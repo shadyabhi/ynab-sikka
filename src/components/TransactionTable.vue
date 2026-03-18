@@ -195,7 +195,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onUnmounted } from 'vue';
+import { computed, ref, watch, onUnmounted } from 'vue';
 import { formatAccountName, formatAmount, formatDate, makeEmptyColumnFilters } from '../utils';
 
 const inputRefs = ref({});
@@ -266,6 +266,10 @@ onUnmounted(() => {
 });
 
 const selectedIds = ref(new Set());
+
+watch(() => props.transactions, () => {
+  selectedIds.value = new Set();
+});
 
 const toggleSelect = (id) => {
   const next = new Set(selectedIds.value);
