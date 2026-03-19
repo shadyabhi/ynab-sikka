@@ -110,6 +110,31 @@
     </div>
     </div>
 
+    <!-- Choice Dialog: Show Transactions vs Filter -->
+    <div v-if="choiceState.visible" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" @click="closeChoice"></div>
+      <div class="relative bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-6 max-w-sm w-full">
+        <h3 class="text-lg font-semibold text-white mb-1">{{ choiceState.data?.title }}</h3>
+        <p v-if="choiceState.data?.subtitle" class="text-sm text-slate-400 mb-4">{{ choiceState.data.subtitle }}</p>
+        <p v-else class="text-sm text-slate-400 mb-4">What would you like to do?</p>
+        <div class="flex flex-col gap-3">
+          <button
+            @click="onChoiceShowTransactions"
+            class="w-full px-4 py-3 rounded-xl text-white font-medium transition-colors"
+            :style="{ backgroundColor: choiceState.data?.color || '#38bdf8' }"
+          >
+            Show Transactions
+          </button>
+          <button
+            @click="onChoiceFilterTransactions"
+            class="w-full px-4 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors"
+          >
+            {{ choiceState.data?.isGroupFilter ? 'Filter by this group' : 'Filter by this category' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <TransactionPopup
       :visible="popupState.visible"
       :title="popupState.title"
@@ -461,8 +486,44 @@ const popupState = ref({
   filterName: ''
 });
 
+// Choice dialog shown before opening popup or filtering
+const choiceState = ref({ visible: false, data: null });
+
 const openPopup = (data) => {
+  // Show choice dialog first if there's a filterable category/group
+  if (data.showFilter || data.isGroupFilter) {
+    choiceState.value = { visible: true, data };
+  } else {
+    popupState.value = { ...data, visible: true };
+  }
+};
+
+const onChoiceShowTransactions = () => {
+  const data = choiceState.value.data;
+  choiceState.value = { visible: false, data: null };
   popupState.value = { ...data, visible: true };
+};
+
+const onChoiceFilterTransactions = () => {
+  const data = choiceState.value.data;
+  choiceState.value = { visible: false, data: null };
+  // Apply filter logic (same as onPopupFilterCategory)
+  if (data.isGroupFilter && data.filterName) {
+    const groupName = data.filterName;
+    const cgf = filters.value.categoryGroupFilters;
+    if (cgf[groupName] === 'include') {
+      cgf[groupName] = 'neutral';
+    } else {
+      Object.keys(cgf).forEach(k => { cgf[k] = 'neutral'; });
+      cgf[groupName] = 'include';
+    }
+  } else if (data.filterName) {
+    onTimelineCategoryClick(data.filterName);
+  }
+};
+
+const closeChoice = () => {
+  choiceState.value = { visible: false, data: null };
 };
 
 const closePopup = () => {
