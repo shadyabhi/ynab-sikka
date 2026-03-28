@@ -112,7 +112,6 @@ watch(() => props.syncing, (isSyncing, wasSyncing) => {
   if (!isSyncing && wasSyncing) {
     setTimeout(() => {
       showLog.value = false;
-      syncMode.value = null;
     }, 5000);
   }
 });

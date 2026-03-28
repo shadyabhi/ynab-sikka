@@ -231,19 +231,18 @@ const chartOption = computed(() => {
 
         if (budgeted > 0) {
           const remaining = Math.max(0, budgeted - categoryTotal);
-          const spentChildren = [{
-            name: `Spent`,
-            value: categoryTotal,
+          const spentChildren = payeeNodes.map(p => ({
+            ...p,
             itemStyle: { color: baseColor, borderWidth: 0 },
             label: {
               show: true,
               color: '#fff',
-              formatter: `Spent\n${formatCurrency(categoryTotal)}`,
+              formatter: `${p.name}\n${formatCurrency(p.value)}`,
               overflow: 'truncate',
               ellipsis: ''
             },
             _isSpentSlice: true
-          }];
+          }));
           if (remaining > 0) {
             spentChildren.push({
               name: `Remaining`,

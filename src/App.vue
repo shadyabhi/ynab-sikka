@@ -424,7 +424,7 @@ const accountFilteredTransactions = computed(() => {
   let allTx = [];
 
   accounts.value.forEach(acc => {
-    if (selectedSet.has(acc.id)) {
+    if (selectedSet.size === 0 || selectedSet.has(acc.id)) {
       allTx.push(...acc.transactions);
     }
   });
