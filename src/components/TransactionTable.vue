@@ -91,8 +91,9 @@
       >{{ cat }}</button>
     </div>
 
-    <div class="flex-1 overflow-auto rounded-xl border border-slate-700/50 custom-scrollbar relative">
-      <table class="w-full text-left text-xs md:text-sm text-slate-300 table-fixed" style="min-width: 700px;">
+    <!-- Desktop Table View -->
+    <div class="flex-1 overflow-auto rounded-xl border border-slate-700/50 custom-scrollbar relative hidden lg:block">
+      <table class="w-full text-left text-sm text-slate-300 table-fixed" style="min-width: 700px;">
         <thead class="text-xs text-sky-300 uppercase bg-slate-800/80 sticky top-0 backdrop-blur-md z-10 shadow-sm">
           <tr>
             <th v-if="mode === 'unapproved'" class="px-2 py-3 w-10 text-center">
@@ -185,6 +186,52 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="flex-1 overflow-auto rounded-xl border border-slate-700/50 custom-scrollbar lg:hidden">
+      <div v-if="filteredTransactions.length === 0" class="px-4 py-8 text-center text-slate-500 italic bg-slate-900/30">
+        No transactions found matching criteria.
+      </div>
+      <div v-else class="divide-y divide-slate-800/50">
+        <div
+          v-for="tx in filteredTransactions"
+          :key="tx.id"
+          class="px-3 py-3 hover:bg-slate-800/50 transition-colors"
+          :class="{ 'bg-purple-900/10 border-l-2 border-l-purple-500/50': tx.transferaccountid }"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0" v-if="mode === 'unapproved'">
+              <input
+                type="checkbox"
+                :checked="selectedIds.has(tx.id)"
+                @change="toggleSelect(tx.id)"
+                class="rounded bg-slate-700 border-slate-600 text-emerald-500 focus:ring-emerald-500 cursor-pointer flex-shrink-0 mt-0.5"
+              />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-medium text-slate-200 text-sm truncate" @click.stop="addTag('payeename', tx.payeename)">{{ tx.payeename }}</span>
+                <span class="font-mono font-medium text-sm flex-shrink-0" :class="tx.amount > 0 ? 'text-emerald-400' : 'text-slate-200'" @click.stop="addTag('amount', formatAmount(tx.amount))">
+                  ${{ formatAmount(tx.amount) }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-400">
+                <span class="whitespace-nowrap" @click.stop="addTag('date', formatDate(tx.date))">{{ formatDate(tx.date) }}</span>
+                <span class="text-slate-600">·</span>
+                <span class="flex items-center gap-1 truncate" @click.stop="addTag('accountname', formatAccountName(tx.accountname))">
+                  <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="tx.amount > 0 ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                  <span class="truncate">{{ formatAccountName(tx.accountname) }}</span>
+                </span>
+              </div>
+              <div class="flex items-center gap-2 mt-1.5">
+                <span v-if="tx.categoryname" class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-slate-400 truncate max-w-[60%]" @click.stop="addTag('categoryname', tx.categoryname)">{{ tx.categoryname }}</span>
+                <span v-if="tx.memo" class="text-[10px] text-slate-500 truncate" :title="tx.memo" @click.stop="addTag('memo', tx.memo)">{{ tx.memo }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="mt-4 text-xs text-slate-500 flex justify-between items-center">

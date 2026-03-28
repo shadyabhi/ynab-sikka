@@ -24,7 +24,7 @@
       <div
         v-show="maximizedPane === null || maximizedPane === 'table'"
         class="transition-all duration-300"
-        :class="maximizedPane === 'table' ? 'flex-1 h-full' : 'flex-none h-[300px] md:h-[500px]'"
+        :class="maximizedPane === 'table' ? 'flex-1 h-full' : 'flex-none h-[500px] lg:h-[500px]'"
       >
          <TransactionTable
             :transactions="filteredTransactions"

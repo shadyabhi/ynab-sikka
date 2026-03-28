@@ -243,6 +243,7 @@ const chartOption = computed(() => {
             },
             _isSpentSlice: true
           }));
+          spentChildren.sort((a, b) => b.value - a.value);
           if (remaining > 0) {
             spentChildren.push({
               name: `Remaining`,
