@@ -2,49 +2,13 @@
   <div>
     <nav class="bg-slate-900 border-b border-slate-700/50 px-3 md:px-6 py-2 md:py-3 flex items-center justify-between relative z-20">
       <div class="flex items-center gap-3 md:gap-8">
-        <!-- Mobile sidebar toggle -->
-        <button
-          @click="emit('toggle-sidebar')"
-          class="p-1.5 text-slate-400 hover:text-sky-300 hover:bg-slate-800/50 rounded-lg transition-colors md:hidden"
-        >
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path v-if="!sidebarOpen" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            <path v-else stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
         <h1 class="text-lg md:text-xl font-bold neon-text text-sky-400">YNAB Tracker</h1>
-
-        <div class="hidden md:flex items-center gap-4">
-          <a
-            href="#"
-            @click.prevent="navigate('analytics')"
-            :class="currentPage === 'analytics' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' : 'text-slate-400 hover:text-slate-200'"
-            class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-          >
-            Analytics
-          </a>
-        </div>
       </div>
 
       <div class="flex items-center gap-1.5 md:gap-3">
         <span v-if="lastSyncTime" class="text-[10px] md:text-xs text-slate-500 hidden sm:inline">
           Synced {{ syncAgo }}
         </span>
-
-        <!-- Pull: delta sync (down arrow) -->
-        <div class="relative group">
-          <button
-            @click="onPull"
-            :disabled="syncing"
-            class="p-2 text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50"
-          >
-            <svg class="w-5 h-5" :class="syncing && syncMode === 'pull' ? 'animate-bounce' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
-            </svg>
-          </button>
-          <div class="tooltip">Pull changes</div>
-        </div>
 
         <!-- Force sync: nuke cache + full re-fetch (circular arrows with bolt) -->
         <div class="relative group">
@@ -53,7 +17,7 @@
             :disabled="syncing"
             class="p-2 text-slate-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-lg transition-colors disabled:opacity-50"
           >
-            <svg class="w-5 h-5" :class="syncing && syncMode === 'force' ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg class="w-5 h-5" :class="syncing ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M13 10l-1 4h2l-1 4" />
             </svg>
@@ -128,31 +92,17 @@
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
-  currentPage: { type: String, default: 'analytics' },
   lastSyncTime: { type: Number, default: null },
   syncing: { type: Boolean, default: false },
   syncLog: { type: Array, default: () => [] },
   syncError: { type: String, default: null },
-  sidebarOpen: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['navigate', 'open-settings', 'pull', 'force-sync', 'toggle-sidebar']);
+const emit = defineEmits(['open-settings', 'force-sync']);
 
 const showLog = ref(false);
-const syncMode = ref(null); // 'pull' or 'force'
-
-const navigate = (page) => {
-  emit('navigate', page);
-};
-
-const onPull = () => {
-  syncMode.value = 'pull';
-  showLog.value = true;
-  emit('pull');
-};
 
 const onForceSync = () => {
-  syncMode.value = 'force';
   showLog.value = true;
   emit('force-sync');
 };
