@@ -24,14 +24,14 @@
     <div v-if="transactions.length === 0" class="flex-1 flex items-center justify-center text-slate-500 italic">
       No spending data available.
     </div>
-    <div v-else class="w-full flex-1 relative min-h-[250px] md:min-h-[400px]">
+    <div v-else class="w-full flex-1 relative min-h-[500px] md:min-h-[400px]">
       <v-chart ref="chartRef" class="chart" :option="chartOption" autoresize @click="onClickNode" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, shallowRef } from 'vue';
+import { computed, ref, shallowRef, onMounted, onUnmounted } from 'vue';
 import { escHtml } from '../utils';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -69,6 +69,11 @@ const emit = defineEmits(['toggle-maximize', 'category-click', 'account-click', 
 const chartRef = shallowRef(null);
 const viewMode = ref('group');
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+const isMobile = ref(window.innerWidth < 768);
+const onResize = () => { isMobile.value = window.innerWidth < 768; };
+onMounted(() => window.addEventListener('resize', onResize));
+onUnmounted(() => window.removeEventListener('resize', onResize));
 
 const openDetailPopup = (params) => {
   const pathInfo = params.treePathInfo;
@@ -268,7 +273,8 @@ const chartOption = computed(() => {
             upperLabel: {
               show: true,
               color: '#fff',
-              height: 24,
+              height: isMobile.value ? 18 : 24,
+              fontSize: isMobile.value ? 10 : 12,
               backgroundColor: 'rgba(15, 23, 42, 0.6)',
               formatter: `${categoryName} - ${formatCurrency(categoryTotal)} / ${formatCurrency(budgeted)}`,
               overflow: 'break'
@@ -394,18 +400,21 @@ const chartOption = computed(() => {
         nodeClick: false,
         drillDownIcon: '▶',
         roam: false,
-        visibleMin: 300,
+        visibleMin: isMobile.value ? 100 : 300,
         sort: false,
+        layoutAlgorithm: isMobile.value ? 'sliceAndDice' : 'squarify',
         label: {
           show: true,
           formatter: '{b}',
+          fontSize: isMobile.value ? 10 : 12,
           overflow: 'truncate',
           ellipsis: ''
         },
         upperLabel: {
           show: true,
-          height: 30,
+          height: isMobile.value ? 22 : 30,
           color: '#fff',
+          fontSize: isMobile.value ? 10 : 12,
           formatter: function (params) {
               const pct = totalSpend > 0 ? ((params.value / totalSpend) * 100).toFixed(1) + '%' : '0%';
               return params.name + ' - ' + formatCurrency(params.value) + ' (' + pct + ')';
@@ -459,6 +468,7 @@ const chartOption = computed(() => {
             upperLabel: {
                 show: true,
                 color: '#fff',
+                fontSize: isMobile.value ? 10 : 12,
                 formatter: function (params) {
                     if (isGroupView && params.data?._budgeted > 0) {
                       const spent = params.data._spent;
@@ -469,7 +479,7 @@ const chartOption = computed(() => {
                     return params.name + ' - ' + formatCurrency(params.value) + ' (' + pct + ')';
                 },
                 backgroundColor: 'rgba(15, 23, 42, 0.7)',
-                height: 30
+                height: isMobile.value ? 20 : 30
             }
           },
           {
@@ -479,12 +489,13 @@ const chartOption = computed(() => {
               : { borderColor: '#334155', borderWidth: 1, gapWidth: 1 },
             upperLabel: isGroupView ? { show: false } : {
                 show: true,
+                fontSize: isMobile.value ? 10 : 12,
                 formatter: function (params) {
                     const pct = totalSpend > 0 ? ((params.value / totalSpend) * 100).toFixed(1) + '%' : '0%';
                     return params.name + ' - ' + formatCurrency(params.value) + ' (' + pct + ')';
                 },
                 backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                height: 24,
+                height: isMobile.value ? 18 : 24,
                 color: '#cbd5e1'
             }
           },
